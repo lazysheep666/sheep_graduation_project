@@ -1,0 +1,17 @@
+{
+    "extends": [
+      "standard"
+    ],
+    "plugins": [
+      "html"
+    ],
+    "env": {
+        "browser": true,
+        "node": true,
+        "es6": true,
+        "jquery": true
+    },
+    "rules": {
+      "space-before-function-paren": ["error", "never"]
+    }
+}
