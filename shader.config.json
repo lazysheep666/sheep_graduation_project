@@ -1,0 +1,20 @@
+{
+    "normal": {
+        "name": "Normal",
+        "apple": {
+            "path": "normal"
+        },
+        "stem": {
+            "path": "normal"
+        }
+    },
+    "cel": {
+        "name": "Cel",
+        "apple": {
+            "path": "cel"
+        },
+        "stem": {
+            "path": "cel"
+        }
+    }
+}

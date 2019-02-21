@@ -1,58 +1,175 @@
-import '../css/index.styl'
-import Load from './Load'
-import {vsSource} from './VertexShader'
-import {fsSource} from './FragmentShader'
+import * as THREE from 'three'
+import MTLLoader from './lib/MTLLoader.js'
+import OBJLoader from './lib/OBJLoader.js'
+import OrbitControls from './lib/OrbitControls'
 
-const body = document.querySelector('#body')
-body.onload = () => {
-  const canvas = document.querySelector('#glcanvas')
-  const gl = canvas.getContext('webgl')
-  if (!gl) {
-    alert('Unable to initialize WebGL. Your browser or machine may not support it.')
-    return
+MTLLoader.initMTLLoader()
+OBJLoader.initOBJLoader()
+OrbitControls.initOrbitControls()
+
+class App {
+  constructor() {
+    this.scene = null
+    this.camera = null
+    this.renderer = null
+    this.keyLight = null
+    this.controls = null
+    this.apple = new Apple()
+    this.shaderConfig = null
   }
 
-  // Set clear color to black, fully opaque
-  gl.clearColor(0.0, 0.0, 0.0, 1.0)
-  // Clear the color buffer with specified clear color
-  gl.clear(gl.COLOR_BUFFER_BIT)
+  init() {
+    const Canvas = document.querySelector('#canvas')
+    Canvas.width = window.innerWidth
+    Canvas.height = window.innerHeight
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: Canvas,
+      antialias: true
+    })
+    this.renderer.setClearColor(0xf3f3f3)
+    this.scene = new THREE.Scene()
 
-  const shaderProgram = Load.initShaderProgram(gl, vsSource, fsSource)
+    this.camera = new THREE.PerspectiveCamera(75, Canvas.width / Canvas.height, 10, 1000)
+    this.camera.position.set(130, 35, -35)
 
-  gl.useProgram(shaderProgram)
+    this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement)
 
-  // 信息
-  const programInfo = {
-    program: shaderProgram,
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram, 'a_position')
+    this.keyLight = new THREE.SpotLight(0xffffff, 1, 60000, Math.PI / 2, 25)
+    this.keyLight.position.set(1000, 1000, 500)
+    this.keyLight.target.position.set(100, 0, 0)
+    this.scene.add(this.keyLight)
+
+    this.apple.init().then(() => {
+      console.log(this.apple)
+      this.scene.add(this.apple.groupMesh)
+    })
+
+    let _this = this
+    // get config
+    $.get('../../shader.config.json', function(data) {
+      _this.shaderConfig = data
+    })
+
+    // draw
+    this.animate()
+  }
+
+  animate() {
+    requestAnimationFrame(this.animate.bind(this))
+    this.draw()
+  }
+
+  draw() {
+    console.log('draw')
+    this.renderer.render(this.scene, this.camera)
+  }
+
+  applyShader(shaderName) {
+    if (shaderName === 'none') {
+      this.apple.appleMesh.materia = this.appleMat
+      this.apple.stemMesh.materia = this.stemMat
+    }
+
+    let _this = this
+    // wait until the config be loaded
+    if (this.shaderConfig === null) {
+      setTimeout(function() {
+        _this.applyShader(shaderName)
+      }, 1000)
+      return
+    }
+
+    let lightUniform = {
+      type: 'v3',
+      value: this.keyLight.position
+    }
+
+    setShader('apple', this.apple.appleMesh, {
+      uniforms: {
+        color: {
+          type: 'v3',
+          value: new THREE.Color('#f55c1f')
+        },
+        light: lightUniform
+      }
+    })
+
+    setShader('stem', this.apple.stemMesh, {
+      uniforms: {
+        color: {
+          type: 'v3',
+          value: new THREE.Color('#60371b')
+        },
+        light: lightUniform
+      }
+    })
+
+    function setShader(meshName, mesh, qualifiers) {
+      let config = _this.shaderConfig[shaderName] && _this.shaderConfig[shaderName][meshName]
+      // load
+      if (!config) {
+        alert('no such shader')
+        return
+      }
+      $.get(`../../shader/${config.path}.vs`, (vs) => {
+        $.get(`../../shader/${config.path}.fs`, (fs) => {
+          let material = new THREE.ShaderMaterial({
+            vertexShader: vs,
+            fragmentShader: fs,
+            uniforms: qualifiers.uniforms
+          })
+          mesh.material = material
+        })
+      })
     }
   }
+}
 
-  let positionBuffer = gl.createBuffer()
-  gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
+class Apple {
+  constructor() {
+    this.appleMesh = null
+    this.stemMesh = null
+    this.groupMesh = null
+    this.appleMat = null
+    this.stemMat = null
+  }
+  init() {
+    let _this = this
+    return new Promise((resolve) => {
+      let mtlLoader = new THREE.MTLLoader()
+      mtlLoader.setPath('../../model/')
 
-  // Bind it to ARRAY_BUFFER (think of it as ARRAY_BUFFER = positionBuffer)
-  gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer)
+      // load the 3D model
+      mtlLoader.load('apple.mtl', function(materials) {
+        materials.preload()
 
-  let positions = [
-    0, 0,
-    0, 1,
-    1, 0
-  ]
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW)
-  // Tell the attribute how to get data out of positionBuffer (ARRAY_BUFFER)
-  let size = 2 // 2 components per iteration
-  let type = gl.FLOAT // the data is 32bit floats
-  let normalize = false // don't normalize the data
-  let stride = 0 // 0 = move forward size * sizeof(type) each iteration to get the next position
-  let offset = 0 // start at the beginning of the buffer
-  gl.vertexAttribPointer(
-    programInfo.attribLocations.vertexPosition,
-    size, type, normalize, stride, offset
-  )
-  gl.enableVertexAttribArray(programInfo.attribLocations.vertexPosition)
-  var primitiveType = gl.TRIANGLES
-  var count = 3
-  gl.drawArrays(primitiveType, offset, count)
+        // model loader
+        var objLoader = new THREE.OBJLoader()
+        objLoader.setMaterials(materials)
+        objLoader.setPath('./../model/')
+        objLoader.load('apple.obj', function(obj) {
+          obj.traverse(function(child) {
+            if (child instanceof THREE.Mesh) {
+              if (!_this.appleMesh) {
+                _this.appleMesh = child
+                _this.appleMat = _this.appleMesh.material
+              } else {
+                _this.stemMesh = child
+                _this.stemMat = _this.stemMesh.material
+              }
+            }
+          })
+          _this.groupMesh = obj
+          _this.groupMesh.position.set(-50, -50, 0)
+          resolve()
+        })
+      })
+    })
+  }
+}
+
+window.onload = () => {
+  const app = new App()
+  app.init()
+  app.applyShader('cel')
 }
