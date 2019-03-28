@@ -171,5 +171,5 @@ class Apple {
 window.onload = () => {
   const app = new App()
   app.init()
-  app.applyShader('cel')
+  app.applyShader('cel-silhouette')
 }

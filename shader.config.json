@@ -16,5 +16,14 @@
         "stem": {
             "path": "cel"
         }
-    }
+    },
+    "cel-silhouette": {
+      "name": "Cel with Silhouette",
+      "apple": {
+          "path": "cel-silhouette"
+      },
+      "stem": {
+          "path": "cel-silhouette"
+      }
+  }
 }

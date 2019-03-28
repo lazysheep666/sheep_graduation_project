@@ -7,6 +7,7 @@ varying vec3 vLight;
 
 void main()
 {
+    // pass to fs
     vColor = color;
     vNormal = normalize(normalMatrix * normal);
 
