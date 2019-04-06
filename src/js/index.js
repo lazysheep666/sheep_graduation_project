@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import * as dat from 'dat.gui'
 import MTLLoader from './lib/MTLLoader.js'
 import OBJLoader from './lib/OBJLoader.js'
 import OrbitControls from './lib/OrbitControls'
@@ -48,10 +49,50 @@ class App {
     // get config
     $.get('../../shader.config.json', function(data) {
       _this.shaderConfig = data
+      _this.initControl()
     })
 
     // draw
     this.animate()
+  }
+  initControl() {
+    let _this = this
+    const gui = new dat.GUI()
+
+    var shaderNames = ['none']
+    for (var shader in _this.shaderConfig) {
+      shaderNames.push(shader)
+    }
+
+    var option = {
+      'Shader': 'none',
+      'Light X': _this.keyLight.position.x,
+      'Light Y': _this.keyLight.position.y,
+      'Light Z': _this.keyLight.position.z
+    }
+    // shader
+    gui.add(option, 'Shader', shaderNames)
+      .onChange(function(value) {
+        _this.applyShader(value)
+      })
+
+    // light
+    var lightFolder = gui.addFolder('Light')
+    lightFolder.add(option, 'Light X')
+      .min(-2000).max(2000)
+      .onChange(function(value) {
+        _this.keyLight.position.x = value
+      })
+    lightFolder.add(option, 'Light Y')
+      .min(-2000).max(2000)
+      .onChange(function(value) {
+        _this.keyLight.position.y = value
+      })
+    lightFolder.add(option, 'Light Z')
+      .min(-2000).max(2000)
+      .onChange(function(value) {
+        _this.keyLight.position.z = value
+      })
   }
 
   animate() {
@@ -66,8 +107,9 @@ class App {
 
   applyShader(shaderName) {
     if (shaderName === 'none') {
-      this.apple.appleMesh.materia = this.appleMat
-      this.apple.stemMesh.materia = this.stemMat
+      this.apple.appleMesh.material = this.apple.appleMat
+      this.apple.stemMesh.material = this.apple.stemMat
+      return
     }
 
     let _this = this
@@ -107,10 +149,10 @@ class App {
     function setShader(meshName, mesh, qualifiers) {
       let config = _this.shaderConfig[shaderName] && _this.shaderConfig[shaderName][meshName]
       // load
-      if (!config) {
-        alert('no such shader')
-        return
-      }
+      // if (!config) {
+      //   alert('no such shader')
+      //   return
+      // }
       $.get(`../../shader/${config.path}.vs`, (vs) => {
         $.get(`../../shader/${config.path}.fs`, (fs) => {
           let material = new THREE.ShaderMaterial({
@@ -171,5 +213,4 @@ class Apple {
 window.onload = () => {
   const app = new App()
   app.init()
-  app.applyShader('cel-silhouette')
 }

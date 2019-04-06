@@ -17,13 +17,13 @@
             "path": "cel"
         }
     },
-    "cel-silhouette": {
-      "name": "Cel with Silhouette",
+    "cel-outline": {
+      "name": "Cel with outline",
       "apple": {
-          "path": "cel-silhouette"
+          "path": "cel-outline"
       },
       "stem": {
-          "path": "cel-silhouette"
+          "path": "cel-outline"
       }
   }
 }
